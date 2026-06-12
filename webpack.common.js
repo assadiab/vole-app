@@ -16,6 +16,13 @@ module.exports = (env) => {
     },
     resolve: {
       extensions: [".js", ".jsx", ".ts", ".tsx"],
+      alias: {
+        // Exact-match alias: forces vole-app's own `import "three"` to share the same
+        // instance as vole-core. The $ makes it exact so `three/addons/...` sub-paths
+        // still resolve normally from vole-core/node_modules, avoiding duplicate instances
+        // and the broken renderer that comes with them.
+        "three$": path.resolve(__dirname, "../vole-core/node_modules/three"),
+      },
     },
     plugins: [
       new CleanWebpackPlugin(),

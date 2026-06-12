@@ -1,6 +1,25 @@
 import React, { useState } from "react";
 
 import { ImageViewerApp } from "../src";
+import type { ViewerChannelSettings } from "../src/aics-image-viewer/shared/utils/viewerChannelSettings";
+
+/**
+ * Enable the first three channels by default. Without this, channels default to
+ * `volumeEnabled: false`, so the loader is asked to load zero channels and the
+ * viewer spins forever waiting for data that is never requested. (OME-Zarr with
+ * no `omero` metadata — e.g. ilastik exports — has no per-channel defaults.)
+ */
+const DEFAULT_CHANNEL_SETTINGS: ViewerChannelSettings = {
+  groups: [
+    {
+      name: "Channels",
+      channels: [
+        { match: [0, 1, 2], enabled: true },
+        { match: "(.+)", enabled: false },
+      ],
+    },
+  ],
+};
 
 /**
  * Minimal page that loads a local OME-Zarr packaged as a `.zip` directly into
@@ -46,6 +65,7 @@ export default function LocalZipViewer(): React.ReactElement {
             imageUrl=""
             zipData={zipFile}
             zipRootPath={rootPath || undefined}
+            viewerChannelSettings={DEFAULT_CHANNEL_SETTINGS}
             cellId=""
             imageDownloadHref=""
             parentImageDownloadHref=""
