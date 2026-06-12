@@ -51,6 +51,18 @@ export interface AppProps {
   imageUrl: string | MultisceneUrls;
   parentImageUrl?: string | MultisceneUrls;
 
+  // THIRD WAY TO GET DATA INTO THE VIEWER: pass a local OME-Zarr packaged as a `.zip`
+
+  /**
+   * A local OME-Zarr packaged as a `.zip` `Blob`/`File`. Takes precedence over
+   * `imageUrl` when set. The zip is read in-place with lazy per-chunk access —
+   * no HTTP server and no full extraction. Prefer zipping in STORE mode so the
+   * already-compressed Zarr chunks aren't double-compressed.
+   */
+  zipData?: Blob;
+  /** Path to the zarr group inside the zip. Omit to auto-detect. */
+  zipRootPath?: string;
+
   viewerChannelSettings?: ViewerChannelSettings;
 
   appHeight: string;

@@ -15,15 +15,24 @@ export type LoadSceneOptions = {
   onChannelLoaded?: (volume: Volume, channelIndex: number) => void;
 };
 
+/**
+ * A local OME-Zarr packaged as a `.zip` Blob/File. Read in-place with lazy
+ * per-chunk access (no server, no full extraction). `rootPath` points at the
+ * zarr group inside the zip; omit it to auto-detect.
+ */
+export type ZipSource = { zip: Blob; rootPath?: string };
+
+export type ScenePath = string | string[] | RawArrayLoaderOptions | ZipSource;
+
 export default class SceneStore {
   context: VolumeLoaderContext;
   loaders: (ThreadableVolumeLoader | undefined)[];
-  paths: (string | string[] | RawArrayLoaderOptions)[];
+  paths: ScenePath[];
   currentScene: number = 0;
   syncChannels: boolean = false;
   prefetchPriority: PrefetchDirection[] = [];
 
-  constructor(context: VolumeLoaderContext, paths: (string | string[] | RawArrayLoaderOptions)[]) {
+  constructor(context: VolumeLoaderContext, paths: ScenePath[]) {
     this.paths = paths;
     this.context = context;
     this.loaders = new Array(paths.length).fill(undefined);
@@ -38,9 +47,16 @@ export default class SceneStore {
       let path = this.paths[scene];
       let options: Partial<CreateLoaderOptions> = {};
       if (typeof path === "object" && !Array.isArray(path)) {
-        options.rawArrayOptions = path;
-        options.fileType = VolumeFileFormat.DATA;
-        path = "";
+        if ("zip" in path) {
+          // Local OME-Zarr in a .zip: read in-place, lazily, no server.
+          options.zipSources = [{ data: path.zip, rootPath: path.rootPath }];
+          options.fileType = VolumeFileFormat.ZARR;
+          path = "local.zip"; // logical label only; never fetched
+        } else {
+          options.rawArrayOptions = path;
+          options.fileType = VolumeFileFormat.DATA;
+          path = "";
+        }
       }
 
       await this.context.onOpen();

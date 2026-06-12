@@ -1,4 +1,4 @@
-import { LoadSpec, type RawArrayLoaderOptions, type View3d, type Volume, VolumeLoaderContext } from "@aics/vole-core";
+import { LoadSpec, type View3d, type Volume, VolumeLoaderContext } from "@aics/vole-core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box3, Vector3 } from "three";
 
@@ -13,7 +13,7 @@ import { ViewMode } from "../shared/enums";
 import type { AxisName } from "../shared/types";
 import { useConstructor, useRefWithSetter } from "../shared/utils/hooks";
 import PlayControls from "../shared/utils/playControls";
-import SceneStore from "../shared/utils/sceneStore";
+import SceneStore, { type ScenePath } from "../shared/utils/sceneStore";
 import type { ChannelGrouping, ViewerChannelSettings } from "../shared/utils/viewerChannelSettings";
 import { makeChannelIndexGrouping } from "../shared/utils/viewerChannelSettings";
 import { select, useViewerState } from "../state/store";
@@ -95,7 +95,7 @@ const useEffectEventRef = <T extends (...args: any[]) => void>(callback: T | und
  * @returns An object with the current image, its load status, and controls for playback and loading.
  */
 const useVolume = (
-  scenePaths: (string | string[] | RawArrayLoaderOptions)[],
+  scenePaths: ScenePath[],
   options?: UseVolumeOptions
 ): ReactiveVolume => {
   const channelSettings = useViewerState(select("channelSettings"));

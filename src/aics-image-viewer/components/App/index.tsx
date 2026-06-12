@@ -1,6 +1,6 @@
 // 3rd Party Imports
 import { View3d } from "@aics/vole-core";
-import type { LoadSpec, RawArrayLoaderOptions, Volume } from "@aics/vole-core";
+import type { LoadSpec, Volume } from "@aics/vole-core";
 import { Layout } from "antd";
 import { debounce, isEqual } from "lodash";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +22,7 @@ import { select, useViewerState } from "../../state/store";
 import { subscribeImageToState, subscribeViewToState } from "../../state/subscribers";
 import type { ViewerState } from "../../state/types";
 import useVolume, { ImageLoadStatus } from "../useVolume";
+import type { ScenePath } from "../../shared/utils/sceneStore";
 import type { AppProps, ControlVisibilityFlags, MultisceneUrls, UseImageEffectType } from "./types";
 
 import CellViewerCanvasWrapper from "../CellViewerCanvasWrapper";
@@ -164,11 +165,13 @@ const App: React.FC<AppProps> = (props) => {
   }, [view3d, showError]);
 
   const imageUrlRef = useRef<string | string[] | MultisceneUrls>("");
-  const scenesRef = useRef<(string | string[])[] | [RawArrayLoaderOptions]>([]);
-  const { imageUrl, parentImageUrl, rawData, rawDims } = props;
-  const scenes = useMemo((): (string | string[])[] | [RawArrayLoaderOptions] => {
+  const scenesRef = useRef<ScenePath[]>([]);
+  const { imageUrl, parentImageUrl, rawData, rawDims, zipData, zipRootPath } = props;
+  const scenes = useMemo((): ScenePath[] => {
     if (rawData && rawDims) {
       return [{ data: rawData, metadata: rawDims }];
+    } else if (zipData) {
+      return [{ zip: zipData, rootPath: zipRootPath }];
     } else {
       const showParentImage = imageType === ImageType.fullField && parentImageUrl !== undefined;
       const path = showParentImage ? parentImageUrl : imageUrl;
@@ -182,7 +185,7 @@ const App: React.FC<AppProps> = (props) => {
       scenesRef.current = result;
       return result;
     }
-  }, [imageUrl, parentImageUrl, rawData, rawDims, imageType]);
+  }, [imageUrl, parentImageUrl, rawData, rawDims, zipData, zipRootPath, imageType]);
 
   const maskChannelName = props.viewerChannelSettings?.maskChannelName;
 
