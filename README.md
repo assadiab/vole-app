@@ -1,49 +1,96 @@
-# Vol-E App
+# Vol-E App — local OME-Zarr `.zip` fork
 
-<p>
-  <a href="https://www.npmjs.com/package/@aics/vole-app"><img src="https://img.shields.io/npm/v/%40aics%2Fvole-app" alt="npm package"></a>
-</p>
+> A fork of [Vol-E (Volume Explorer)](https://github.com/allen-cell-animated/vole-app)
+> by the Allen Institute for Cell Science, extended to open **local OME-Zarr files
+> packaged as `.zip`** directly in the browser — no server, no URL, no extraction.
+>
+> Vol-E is licensed under BSD-3-Clause; the original copyright and license are
+> retained in [`LICENSE`](LICENSE).
 
-Volume Explorer (Vol-E) is a browser based volume viewer built with React and WebGL (Three.js). This package wraps the [vole-core](https://github.com/allen-cell-animated/vole-core) library.
+Vol-E is a browser-based 3D volume viewer built with React and WebGL (Three.js).
+This package wraps the [vole-core](https://github.com/assadiab/vole-core) library
+(also forked — see below).
 
-For the latest stable release, please visit [https://vole.allencell.org](https://vole.allencell.org)
+## What this fork adds
 
-Volume data is provided to the core 3d viewer via one of the following file formats:
+**Open a local OME-Zarr `.zip` straight from the home page.** The data is read
+lazily, chunk by chunk, inside the browser — no HTTP server, no URL, no unzipping
+to disk, and not Chromium-only (it uses `Blob.slice`, not the File System Access
+API).
 
-- a url to a OME-ZARR image
-- a url to a OME-TIFF file
-- a json file containing dimensions and other metadata, and texture atlases (png files containing volume slices tiled across the 2d image). These texture atlases must be prepared in advance before loading into this viewer.
+- The home-page **Load** button now opens a drag-and-drop picker for a local
+  `.ome.zarr.zip` file (it replaces the previous "load from URL" field).
+- The selected `File` is passed to the viewer through React Router navigation
+  state and rendered via the new `zipData` prop on `ImageViewerApp`.
+- The heavy lifting (a zarrita store that reads chunks out of the zip) lives in
+  the matching [vole-core fork](https://github.com/assadiab/vole-core) as
+  `ZipStore`, exposed through a new `zipSources` loader option.
 
-The volume shader itself is a heavily modified version of one that has distant origins in [Bisque](http://bioimage.ucsb.edu/bisque).
+### Preparing a `.zip`
 
-## to use
+Package the `.ome.zarr` folder with **no compression** (STORE mode) — Zarr chunks
+are already compressed, so zip deflate would only slow reads:
 
-- `https://vole.allencell.org/?url=path/to/ZARR`
-- for more url parameters, see [`URL_SPEC.md`](documentation/URL_SPEC.md)
+```python
+import zipfile, os
 
-or as React component:
+src = "image.ome.zarr"
+with zipfile.ZipFile("image.ome.zarr.zip", "w", zipfile.ZIP_STORED) as zf:
+    for dp, _, files in os.walk(src):
+        for f in files:
+            full = os.path.join(dp, f)
+            arc = os.path.relpath(full, os.path.dirname(src)).replace(os.sep, "/")
+            zf.write(full, arc)
+```
 
-- `npm install @aics/vole-app`
-- import the app as `import { ImageViewerApp } from "@aics/vole-app"`
-- send in props as is shown in [`public/index.jsx`](public/index.tsx)
+## Supported data sources
+
+- a local OME-Zarr packaged as a `.zip` (this fork's feature)
+- a URL to an OME-Zarr or OME-TIFF image (still available as a React prop)
+- a json file with texture atlases (legacy)
+
+## Local development
+
+This fork is developed alongside the [vole-core fork](https://github.com/assadiab/vole-core)
+using [pixi](https://pixi.sh). With both repositories checked out side by side:
+
+```bash
+pixi run setup   # install deps, build vole-core, and link it into vole-app
+pixi run dev     # start the dev server at http://localhost:9020
+```
+
+Then open http://localhost:9020, click **Load**, and pick a local `.ome.zarr.zip`.
+
+### Use as a React component
 
 ```jsx
+import { ImageViewerApp } from "@aics/vole-app";
+
 <ImageViewerApp
-  baseUrl="http://dev-aics-dtp-001.corp.alleninstitute.org/cellviewer-1-4-0/Cell-Viewer_Thumbnails/"
-  cellPath="AICS-17/AICS-17_4187_23618_atlas.json"
-  // ... (also see src/aics-image-viewer/components/App/types.ts for full props specification) ...
+  zipData={file}            // a File/Blob from an <input type="file">
+  zipRootPath={undefined}   // optional; the zarr root inside the zip, auto-detected
+  imageUrl=""
+  appHeight="100%"
+  canvasMargin="0 0 0 0"
 />
 ```
 
 ### Running with Docker
 
-Clone the repository and run the following commands in the root of the project:
+Clone the repository and run the following commands in the project root:
 
 ```cmd
 docker build -t vole-app-image .
 docker run --rm -p 9020:80 --name vole-app vole-app-image
 ```
 
-This will create a new docker image called `vole-app` and run it on port 9020. You can access the viewer by navigating to [http://localhost:9020](http://localhost:9020) in your browser.
+The viewer is then available at [http://localhost:9020](http://localhost:9020).
+To rebuild changes, run the above commands again. (The `--rm` flag deletes the
+existing container when it is stopped.)
 
-To rebuild changes, run the above commands again. (The `--rm` flag will automatically delete the existing container when it is stopped.)
+## Credits
+
+Forked from [allen-cell-animated/vole-app](https://github.com/allen-cell-animated/vole-app)
+(Allen Institute for Cell Science). The volume shader has distant origins in
+[Bisque](http://bioimage.ucsb.edu/bisque). Licensed under BSD-3-Clause — see
+[`LICENSE`](LICENSE).
